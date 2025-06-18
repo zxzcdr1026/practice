@@ -1,1 +1,70 @@
+01) SELECT 기초 – 마당서점 DB 활용
+-- (1) 도서번호가 1인 도서 이름
+SELECT bookname FROM Book WHERE bookid = 1;
+
+-- (2) 가격이 20000원 이상인 도서
+SELECT bookname FROM Book WHERE price >= 20000;
+
+-- (3) 박지성의 총 구매액
+SELECT SUM(saleprice) 
+FROM Orders 
+WHERE custid = (SELECT custid FROM Customer WHERE name = '박지성');
+
+02) 집계함수 / 조건문 / 서브쿼리
+-- (1) 도서 총 개수
+SELECT COUNT(*) FROM Book;
+
+-- (6) '이'로 끝나는 고객
+SELECT name, address FROM Customer WHERE name LIKE '%이';
+
+-- (9) 총액 + 평균
+SELECT SUM(saleprice), AVG(saleprice) FROM Orders;
+
+03) 서브쿼리 HAVING
+-- 박지성과 같은 출판사의 도서를 구매한 고객
+SELECT DISTINCT c.name 
+FROM Customer c
+JOIN Orders o ON c.custid = o.custid
+JOIN Book b ON o.bookid = b.bookid
+WHERE b.publisher IN (
+  SELECT publisher FROM Book
+  WHERE bookid IN (
+    SELECT bookid FROM Orders 
+    WHERE custid = (SELECT custid FROM Customer WHERE name = '박지성')
+  )
+);
+
+04) DDL / DML 실습
+-- 테이블 생성
+CREATE TABLE Bookcompany (
+  name VARCHAR(20),
+  address VARCHAR(20),
+  begin DATE
+);
+
+-- 삭제
+DELETE FROM Book WHERE bookname = '삼성경제';
+
+05) EXISTS 사용
+-- 주문한 적 없는 고객 조회
+SELECT * FROM Customer c1
+WHERE NOT EXISTS (
+  SELECT * FROM Orders c2
+  WHERE c1.custid = c2.custid
+);
+06) SQL 명령 분류
+분류	명령어
+DDL	  CREATE, ALTER, DROP
+DML	  SELECT, INSERT, UPDATE, DELETE
+DCL  	GRANT, REVOKE
+
+07,08) 조인 변환 SQL
+SELECT * FROM R INNER JOIN S ON R.C = S.C;
+SELECT * FROM R LEFT OUTER JOIN S ON R.C = S.C;
+
+09) DEFAULT 값 지정 + NULL 연산
+ALTER TABLE R MODIFY col2 INT DEFAULT 10;
+
+-- 이후 NULL 삽입 → col2 = 10으로 처리됨
+INSERT INTO R(col1) VALUES ('EFG');
 
