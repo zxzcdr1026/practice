@@ -1,1 +1,172 @@
+01) 함수	예상 결과
+ABS(-15)	15
+CEIL(15.7)	16
+FLOOR(15.7)	15
+COS(3.14159)	-1 (π의 코사인 근사값)
+LOG(10,100)	2
+ROUND(15.7)	16
+SIGN(-15)	-1
+TRUNCATE(15.7, 0)	15
+POWER(3, 2)	9
+MOD(11, 4)	3
+SUBSTR('ABCDEFG', 3, 4)	'CDEF'
+LENGTH('Birthday')	8
+UPPER('Birthday')	'BIRTHDAY'
+LOWER('Birthday')	'birthday'
+CONCAT('HAPPY', 'Birthday')	'HAPPYBirthday'
+TRIM(LEADING 0 FROM '00AA00')	'AA00'
+CHAR(67 USING utf8)	'C'
+ASCII('A')	65
+LPAD('Page 1', 15, '*')	'**********Page 1'
+RPAD('Page 1', 15, '*')	'Page 1**********'
+REPLACE('JACK', 'J', 'BL')	'BLACK'
+ADDDATE('2024-02-14', INTERVAL 10 DAY)	'2024-02-24'
+LAST_DAY(SYSDATE())	'2024-06-30' (현재 달의 마지막 날짜)
+NOW()	현재 날짜/시간
+DATE_FORMAT(SYSDATE(), '%Y')	'2024'
+STR_TO_DATE('12 05 2024', '%d %m %Y')	'2024-05-12'
+CAST('12.3' AS DECIMAL(3,1))	12.3
+IF(1=1, 'a', 'bb')	'a'
+IFNULL(123, 345)	123
+IFNULL(NULL, 123)	123
+
+02) NULL 관련 쿼리 실습
+-- 1
+SELECT * FROM Mybook;
+
+-- 2
+SELECT bookid, IFNULL(price, 0) FROM Mybook;
+
+-- 3
+SELECT * FROM Mybook WHERE price IS NULL;
+
+-- 4
+SELECT * FROM Mybook WHERE price = ''; -- 빈 문자열은 NULL이 아님 (주의)
+
+-- 5
+SELECT bookid, price + 100 FROM Mybook;
+
+-- 6
+SELECT SUM(price), AVG(price), COUNT(*) FROM Mybook WHERE bookid >= 4;
+
+-- 7
+SELECT COUNT(*), COUNT(price) FROM Mybook;
+
+-- 8
+SELECT SUM(price), AVG(price) FROM Mybook;
+
+03) NULL 포함 테이블에 대한 집계
+-- 예제 테이블: R(A, B)
+INSERT INTO R VALUES(NULL, 10);
+INSERT INTO R VALUES(12, NULL);
+INSERT INTO R VALUES(NULL, NULL);
+INSERT INTO R VALUES(10, 12);
+
+-- (1)
+SELECT COUNT(A) FROM R; -- NULL 제외 → 결과: 2
+
+-- (2)
+SELECT * FROM R WHERE A IN (12, 10, NULL); -- NULL은 비교 불가 → 결과: 2개 튜플
+
+-- (3)
+SELECT A, COUNT(*) FROM R GROUP BY A;
+-- 결과: A가 NULL인 그룹 제외 → A=10, A=12 각각 COUNT
+
+04) ROWNUM & LIMIT 활용
+-- (1)
+SELECT bookid, bookname, price FROM Book;
+
+-- (2)
+SELECT bookid, bookname, price FROM Book LIMIT 5;
+
+-- (3)
+SELECT bookid, bookname, price FROM Book ORDER BY price LIMIT 5;
+
+-- (4)
+SET @RNUM := 0;
+SELECT bookid, bookname, price, @RNUM := @RNUM + 1 AS ROWNUM
+FROM Book
+WHERE @RNUM < 5;
+
+-- (6)
+SELECT bookid, bookname, price, @RNUM := @RNUM + 1 AS ROWNUM
+FROM (SELECT * FROM Book ORDER BY price) b, (SELECT @RNUM := 0) R
+WHERE @RNUM < 5;
+
+05) 서브쿼리와 GROUP BY
+-- (1)
+SELECT custid,
+  (SELECT address FROM Customer cs WHERE cs.custid = od.custid) AS address,
+  SUM(saleprice) AS total
+FROM Orders od
+GROUP BY od.custid;
+
+-- (2)
+SELECT cs.name, s
+FROM (
+  SELECT custid, AVG(saleprice) AS s FROM Orders GROUP BY custid
+) od, Customer cs
+WHERE cs.custid = od.custid;
+
+-- (3)
+SELECT SUM(saleprice)
+FROM Orders od
+WHERE EXISTS (
+  SELECT * FROM Customer cs
+  WHERE custid <= 3 AND cs.custid = od.custid
+);
+06) NOT EXISTS 외래키 조인 예시
+-- 사원이 없는 부서 찾기 (사원테이블 EMP에 없는 부서)
+
+-- 권장 방식
+SELECT deptno FROM Dept A
+WHERE NOT EXISTS (
+  SELECT * FROM Emp B WHERE A.deptno = B.deptno
+);
+07) 동일 질의 3가지 방식 (서브쿼리 / EXISTS / 조인)
+-- (1) 서브쿼리
+SELECT name
+FROM Customer
+WHERE address LIKE '대한민국%' AND name IN (
+  SELECT name FROM Customer
+  WHERE custid NOT IN (SELECT custid FROM Orders)
+);
+
+-- (2) EXISTS 사용
+SELECT name
+FROM Customer c1
+WHERE address LIKE '대한민국%'
+  AND NOT EXISTS (
+    SELECT * FROM Orders WHERE c1.custid = custid
+  );
+
+-- (3) 조인
+SELECT c1.name
+FROM Customer c1 LEFT JOIN Orders o ON c1.custid = o.custid
+WHERE o.orderid IS NULL AND c1.address LIKE '대한민국%';
+
+08) BETWEEN + GROUP BY + 집합 연산
+-- 등급 구간에 해당하는 회원 찾기
+SELECT A.회원번호, B.등급
+FROM (
+  SELECT 회원번호, SUM(amt) AS amt FROM R GROUP BY 회원번호
+) A, S B
+WHERE A.amt BETWEEN B.vmin AND B.vmax;
+
+09) SQL 실행 순서
+실행 순서:
+1️⃣ FROM →
+2️⃣ WHERE →
+3️⃣ GROUP BY →
+4️⃣ HAVING →
+5️⃣ SELECT →
+6️⃣ ORDER BY
+
+10) 뷰(View)의 장점 (3가지)
+복잡한 쿼리를 단순하게 재사용
+
+보안성을 높일 수 있음 (필요 컬럼만 노출 가능)
+
+논리적 독립성 확보 (기본 테이블 변경 시에도 구조 유지 가능)
+
 
